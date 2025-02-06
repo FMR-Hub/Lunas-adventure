@@ -32,12 +32,12 @@ validate_username() {
 }
 
 # SSH Key Validierung
-validate_ssh_key() {
-  if [[ ! "$1" =~ ^(rsa|ed25519|ecdsa-sha2-nistp256)\s.+$ ]]; then
-    log "Fehler: Ungültiger SSH Public Key."
-    exit 1
-  fi
-}
+# validate_ssh_key() {
+ # if [[ ! "$1" =~ ^(rsa|ed25519|ecdsa-sha2-nistp256)\s.+$ ]]; then
+  #  log "Fehler: Ungültiger SSH Public Key."
+   # exit 1
+  #fi
+#}
 
 # Argumente prüfen
 if [ -n "${1:-}" ]; then

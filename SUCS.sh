@@ -134,3 +134,4 @@ else
 fi
 
 log "Skript erfolgreich abgeschlossen."
+echo "Skript erfolgreich abgeschlossen. '$username'"

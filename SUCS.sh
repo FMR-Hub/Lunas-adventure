@@ -3,8 +3,8 @@
 set -euo pipefail
 
 # Verzeichnis für das Skript und die Logs erstellen
-SCRIPT_DIR="/Lunas-adventure/SSH/UCS/scripts"
-LOG_DIR="/Lunas-adventure/SSH/UCS/logs"
+SCRIPT_DIR="/Lunas-adventure/SSH/SUCS/scripts"
+LOG_DIR="/Lunas-adventure/SSH/SUCS/logs"
 
 mkdir -p "$SCRIPT_DIR"
 mkdir -p "$LOG_DIR"

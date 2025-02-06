@@ -9,7 +9,7 @@ fi
 
 # Zielverzeichnis (in der Regel ist /usr/local/bin im PATH)
 TARGET_DIR="/usr/local/bin"
-TARGET_NAME="ucsfr"
+TARGET_NAME="SUCS"
 
 # Kopiere das Skript in das Zielverzeichnis
 cp ucsfr.sh "$TARGET_DIR/$TARGET_NAME"

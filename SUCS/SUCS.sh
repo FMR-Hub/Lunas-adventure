@@ -65,7 +65,7 @@ if id "$username" &>/dev/null; then
 fi
 
 # Benutzer erstellen
-if useradd -m -s /usr/sbin/nologin "$username"; then
+if useradd -m -s /bin/bash "$username"; then
   log "Benutzer '$username' wurde erstellt."
 else
   log "Fehler: Benutzer '$username' konnte nicht erstellt werden."

@@ -1,33 +1,32 @@
 #!/bin/bash
 set -euo pipefail
 
-# Globale Variablen
+# Verzeichnisse und Log-Datei definieren
 SCRIPT_DIR="/Lunas-adventure/SSH/SUCS/scripts"
 LOG_DIR="/Lunas-adventure/SSH/SUCS/logs"
 LOGFILE="$LOG_DIR/user_creation.log"
 
+# Benötigte Verzeichnisse erstellen
+mkdir -p "$SCRIPT_DIR"
+mkdir -p "$LOG_DIR"
+
 #######################################
-# Protokolliert eine Nachricht.
+# Schreibt eine Log-Nachricht in die Log-Datei und an stderr.
 # Globals:
 #   LOGFILE
 # Arguments:
-#   Nachricht
+#   Nachricht (String)
 # Returns:
 #   None
 #######################################
 log() {
   local message="$1"
-  echo "$(date '+%Y-%m-%d %H:%M:%S') - $message" | tee -a "$LOGFILE"
+  # Log-Nachrichten gehen an stderr, damit sie nicht in stdout landen
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - $message" | tee -a "$LOGFILE" >&2
 }
 
 #######################################
-# Überprüft, ob das Skript als root ausgeführt wird.
-# Globals:
-#   None
-# Arguments:
-#   None
-# Returns:
-#   Exit, falls nicht als root ausgeführt.
+# Prüft, ob das Skript als root ausgeführt wird.
 #######################################
 ensure_root() {
   if [ "$EUID" -ne 0 ]; then
@@ -37,46 +36,28 @@ ensure_root() {
 }
 
 #######################################
-# Erstellt die benötigten Verzeichnisse.
-# Globals:
-#   SCRIPT_DIR, LOG_DIR
-# Arguments:
-#   None
-# Returns:
-#   None
-#######################################
-setup_directories() {
-  mkdir -p "$SCRIPT_DIR"
-  mkdir -p "$LOG_DIR"
-}
-
-#######################################
-# Validiert den eingegebenen Benutzernamen.
-# Globals:
-#   None
+# Validiert den Benutzernamen.
+# Erlaubt sind Kleinbuchstaben, Zahlen, Unterstriche und Bindestriche.
 # Arguments:
 #   Benutzername
 # Returns:
-#   0 wenn gültig, sonst 1.
+#   0, wenn der Name gültig ist, sonst 1.
 #######################################
 validate_username() {
   local username="$1"
   if [[ ! "$username" =~ ^[a-z_][a-z0-9_-]{2,31}$ ]]; then
-    log "Fehler: Ungültiger Benutzername. Erlaubt sind Kleinbuchstaben, Zahlen, Unterstriche und Bindestriche."
+    log "Fehler: Ungültiger Benutzername: $username. Erlaubt sind Kleinbuchstaben, Zahlen, Unterstriche und Bindestriche."
     return 1
   fi
   return 0
 }
 
 #######################################
-# Fragt den Benutzernamen ab (wenn nicht als Argument übergeben)
-# und validiert ihn.
-# Globals:
-#   None
+# Liest den Benutzernamen ein (falls nicht als Argument übergeben) und validiert ihn.
 # Arguments:
 #   Optional: Benutzername als erstes Argument
 # Returns:
-#   Benutzername (über stdout)
+#   Der reine Benutzername (über stdout)
 #######################################
 get_username() {
   local username
@@ -93,20 +74,17 @@ get_username() {
     fi
     log "Benutzername eingegeben: $username"
   fi
+  # Nur der Benutzername wird ausgegeben – Logs landen über stderr!
   echo "$username"
 }
 
 #######################################
-# Validiert einen SSH Public Key.
-# Hier erfolgt eine einfache Prüfung: Der Key muss mit
-# ssh-ed25519 oder ssh-rsa beginnen und einen Base64-Block enthalten.
-#
-# Globals:
-#   None
+# Validiert den übergebenen SSH Public Key.
+# Akzeptiert Schlüssel, die mit "ssh-ed25519" oder "ssh-rsa" beginnen und einen Base64-Block enthalten.
 # Arguments:
 #   SSH Key (String)
 # Returns:
-#   0 wenn gültig, sonst 1.
+#   0, wenn der Key gültig ist, sonst 1.
 #######################################
 validate_ssh_key() {
   local key="$1"
@@ -118,13 +96,9 @@ validate_ssh_key() {
 }
 
 #######################################
-# Fragt den SSH Public Key ab, bis ein gültiger Key eingegeben wird.
-# Globals:
-#   None
-# Arguments:
-#   None
+# Fragt den SSH Public Key interaktiv ab, bis ein gültiger Key eingegeben wurde.
 # Returns:
-#   SSH Key (über stdout)
+#   Der gültige SSH Public Key (über stdout)
 #######################################
 get_ssh_key() {
   local key
@@ -143,15 +117,9 @@ get_ssh_key() {
 }
 
 #######################################
-# Erstellt den Benutzer, richtet sein Home-Verzeichnis ein
-# und fügt den SSH Key hinzu.
-#
-# Globals:
-#   None
+# Erstellt den Benutzer, richtet das Home-Verzeichnis ein und fügt den SSH Key hinzu.
 # Arguments:
 #   Benutzername, SSH Key
-# Returns:
-#   None
 #######################################
 create_user() {
   local username="$1"
@@ -199,12 +167,6 @@ create_user() {
 
 #######################################
 # Installiert und aktiviert Fail2Ban.
-# Globals:
-#   None
-# Arguments:
-#   None
-# Returns:
-#   None
 #######################################
 install_fail2ban() {
   if ! command -v fail2ban-client &>/dev/null; then
@@ -219,7 +181,6 @@ install_fail2ban() {
     log "Fail2Ban ist bereits installiert."
   fi
 
-  # Fail2Ban aktivieren und starten
   if systemctl enable fail2ban && systemctl start fail2ban; then
     if systemctl is-active --quiet fail2ban; then
       log "Fail2Ban wurde erfolgreich gestartet und aktiviert."
@@ -234,22 +195,16 @@ install_fail2ban() {
 }
 
 #######################################
-# Hauptfunktion, die den Ablauf steuert.
-# Globals:
-#   None
+# Hauptfunktion: Steuert den Ablauf des Skripts.
 # Arguments:
 #   Optional: Benutzername und SSH Key als Parameter
-# Returns:
-#   None
 #######################################
 main() {
   ensure_root
-  setup_directories
 
-  # Benutzername und SSH Key abfragen (Argumente oder interaktiv)
   local username sshkey
   username=$(get_username "${1:-}")
-  
+
   if [ -n "${2:-}" ]; then
     sshkey="$2"
     if ! validate_ssh_key "$sshkey"; then

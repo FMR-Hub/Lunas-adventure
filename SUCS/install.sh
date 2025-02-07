@@ -15,4 +15,4 @@ TARGET_NAME="SUCS"
 cp SUCS.sh "$TARGET_DIR/$TARGET_NAME"
 chmod +x "$TARGET_DIR/$TARGET_NAME"
 
-echo "Installation abgeschlossen! Du kannst jetzt 'ucsfr' von der Kommandozeile ausführen."
+echo "Installation abgeschlossen! Du kannst jetzt 'SUCS' von der Kommandozeile ausführen."

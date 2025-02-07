@@ -12,7 +12,7 @@ TARGET_DIR="/usr/local/bin"
 TARGET_NAME="SUCS"
 
 # Kopiere das Skript in das Zielverzeichnis
-cp ucsfr.sh "$TARGET_DIR/$TARGET_NAME"
+cp SUCS.sh "$TARGET_DIR/$TARGET_NAME"
 chmod +x "$TARGET_DIR/$TARGET_NAME"
 
 echo "Installation abgeschlossen! Du kannst jetzt 'ucsfr' von der Kommandozeile ausführen."

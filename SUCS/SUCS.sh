@@ -1,5 +1,4 @@
 #!/bin/bash
-
 set -euo pipefail
 
 # Verzeichnis für das Skript und die Logs erstellen
@@ -30,31 +29,96 @@ validate_username() {
     exit 1
   fi
 }
-# SSH Key Validierung
+
+# Validierung des SSH Public Keys
 validate_ssh_key() {
-  # Temporär deaktiviert – gibt immer "erfolgreich" zurück
-  return 0
+  local key="$1"
+  # Es werden nur die Schlüsseltypen ssh-ed25519 und ssh-rsa unterstützt.
+  if [[ "$key" =~ ^(ssh-ed25519|ssh-rsa)[[:space:]]+([A-Za-z0-9+/]+={0,2})([[:space:]].*)?$ ]]; then
+    return 0
+  else
+    return 1
+  fi
 }
 
-# Argumente prüfen
+# Interaktive Abfrage und Validierung des SSH Public Keys mit Schlüsselauswahl
+prompt_for_valid_ssh_key() {
+  local selected_type
+  local example_key
+  local input_key
+  local key_choice
+
+  while true; do
+    echo "Bitte wählen Sie den SSH-Schlüsseltyp:"
+    echo "  1) ssh-ed25519 (empfohlen)"
+    echo "  2) ssh-rsa (4096 Bit)"
+    read -rp "Ihre Auswahl (1 oder 2): " key_choice
+    case "$key_choice" in
+      1)
+        selected_type="ssh-ed25519"
+        example_key="ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAICexamplekeystring user@example.com"
+        ;;
+      2)
+        selected_type="ssh-rsa"
+        example_key="ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQCexamplekeystring user@example.com"
+        ;;
+      *)
+        echo "Ungültige Auswahl. Bitte wählen Sie 1 oder 2."
+        continue
+        ;;
+    esac
+
+    echo ""
+    echo "Ihr ausgewählter SSH-Schlüsseltyp ist: $selected_type"
+    echo "Ein gültiger öffentlicher Schlüssel sollte in etwa so aussehen:"
+    echo "$example_key"
+    echo ""
+    read -rp "Bitte fügen Sie Ihren SSH Public Key ein: " input_key
+
+    # Überprüfen, ob der eingegebene Schlüssel mit dem gewählten Typ beginnt
+    if [[ "$input_key" != "$selected_type"* ]]; then
+      echo "Fehler: Der Schlüssel beginnt nicht mit '$selected_type'. Bitte versuchen Sie es erneut."
+      continue
+    fi
+
+    # Gesamtvalidierung des Schlüssels
+    if validate_ssh_key "$input_key"; then
+      echo "$input_key"
+      return 0
+    else
+      echo "Fehler: Der SSH Public Key ist ungültig. Bitte überprüfen Sie den Aufbau:" 
+      echo " - Der Schlüsseltyp (z. B. $selected_type)"
+      echo " - Den Base64-codierten Teil (nur Buchstaben, Zahlen, '+' und '/' erlaubt, ggf. '=' am Ende)"
+      echo "Bitte versuchen Sie es erneut."
+      continue
+    fi
+  done
+}
+
+# Benutzername abfragen (als Argument oder interaktiv)
 if [ -n "${1:-}" ]; then
   username="$1"
   validate_username "$username"
   log "Benutzername über Argument übergeben: $username"
 else
-  read -p "Geben Sie den Benutzernamen ein: " username
+  read -rp "Geben Sie den Benutzernamen ein: " username
   validate_username "$username"
   log "Benutzername eingegeben: $username"
 fi
 
-# SSH Public Key prüfen
+# SSH Public Key abfragen
 if [ -n "${2:-}" ]; then
-  sshkey="$2"
-  validate_ssh_key "$sshkey"
-  log "SSH Public Key über Argument übergeben."
+  candidate="$2"
+  if validate_ssh_key "$candidate"; then
+    sshkey="$candidate"
+    log "SSH Public Key über Argument übergeben."
+  else
+    log "Fehler: Ungültiger SSH Public Key über Argument. Bitte geben Sie ihn erneut ein."
+    sshkey=$(prompt_for_valid_ssh_key)
+    log "SSH Public Key eingegeben."
+  fi
 else
-  read -p "Fügen Sie den SSH Public Key ein: " sshkey
-  validate_ssh_key "$sshkey"
+  sshkey=$(prompt_for_valid_ssh_key)
   log "SSH Public Key eingegeben."
 fi
 
@@ -114,7 +178,7 @@ if ! command -v fail2ban-client &> /dev/null; then
     exit 1
   fi
 else
-  log "Fail2Ban ist bereits installiert."
+  log "Heureka! Fail2Ban ist bereits installiert."
 fi
 
 # Fail2Ban Service starten und aktivieren
@@ -131,4 +195,4 @@ else
 fi
 
 log "Skript erfolgreich abgeschlossen."
-echo "Skript erfolgreich abgeschlossen. '$username'"
+echo "Heureka! Skript erfolgreich abgeschlossen. Benutzer '$username' wurde mit '$selected_type' erstellt. Validiere wenn möglich den nutzer mit ssh -i ~/Pfad/Zum/Schlüssel '$username'@localhost -p *port_von_ssh* "

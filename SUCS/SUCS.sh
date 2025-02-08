@@ -2,8 +2,8 @@
 set -euo pipefail
 
 # Verzeichnisse und Log-Datei definieren
-SCRIPT_DIR="/Lunas-adventure/SSH/SUCS/scripts"
-LOG_DIR="/Lunas-adventure/SSH/SUCS/logs"
+SCRIPT_DIR="/Lunas-adventure/SUCS/scripts"
+LOG_DIR="/Lunas-adventure/SUCS/logs"
 LOGFILE="$LOG_DIR/user_creation.log"
 
 # Benötigte Verzeichnisse erstellen
